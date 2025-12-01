@@ -294,21 +294,101 @@ async function initialize() {
     }
 
     // =================================================================
-    // ÍNDICES RECOMENDADOS (Para optimizar consultas)
+    // ÍNDICES RECOMENDADOS (Plan de Índices del Proyecto DrakoBets)
     // =================================================================
-    console.log('⚙️ Creando índices...');
-    
+    console.log('⚙️ Creando índices optimizados (Plan de Índices)...');
+
+    // =============================================================
+    // 1. ÍNDICES COMPUESTOS (consultas más frecuentes)
+    // =============================================================
+
+    // TRANSACCIÓN → Consultar movimientos de un usuario por fecha
+    await colTransaccion.createIndex(
+        { cedulausuario: 1, fechahoratransaccion: -1 }
+    );
+
+    // APUESTA → Historial de apuestas de un usuario, ordenadas
+    await colApuesta.createIndex(
+        { cedulausuario: 1, fechahora: -1 }
+    );
+
+    // APUESTA (por estado) → Buscar apuestas activas, ganadas o perdidas
+    await colApuesta.createIndex(
+        { cedulausuario: 1, estado: 1 }
+    );
+
+    // APUESTA CASINO → Historial del usuario en juegos de casino
+    await colApuestCasino.createIndex(
+        { cedulausuario: 1, fechahora: -1 }
+    );
+
+    // EVENTO → Búsqueda por fecha y estado (partidos activos)
+    await colEvento.createIndex(
+        { fecha: 1, estado: 1 }
+    );
+
+    // COMPETENCIA → Consultar por deporte y fecha de inicio
+    await colCompetencia.createIndex(
+        { "deporte.nombredeporte": 1, fechainicio: -1 }
+    );
+
+
+    // =============================================================
+    // 2. ÍNDICES DE TEXTO (Atlas Search / búsquedas de descripción)
+    // =============================================================
+
+    // EVENTO – búsqueda por nombres, equipos o descripciones
+    await colEvento.createIndex(
+        { descripcion: "text" }
+    );
+
+    // DETALLE APUESTA – búsquedas por texto del tipo de apuesta o descripción
+    await colDetalle.createIndex(
+        { resultadoapuesta: "text" }
+    );
+
+    // COMPETENCIA – búsquedas por nombre o descripción del torneo
+    await colCompetencia.createIndex(
+        { nombrecompetencia: "text", descripcion: "text" }
+    );
+
+
+    // =============================================================
+    // 3. ÍNDICES DE METADATOS (para búsquedas híbridas del RAG)
+    // =============================================================
+
+    // EVENTO → filtrar por deporte en consultas vectoriales híbridas
+    await colEvento.createIndex(
+        { "deporte.nombredeporte": 1 }
+    );
+
+    // APUESTA → filtrar por estado dentro de búsquedas semánticas
+    await colApuesta.createIndex(
+        { estado: 1 }
+    );
+
+    // APUESTA CASINO → filtrar por juego
+    await colApuestCasino.createIndex(
+        { idjuego: 1 }
+    );
+
+
+    // =============================================================
+    // 4. ÍNDICES ÚNICOS Y REFERENCIALES (ya correctos)
+    // =============================================================
+
     // Usuarios únicos por cédula y correo
     await colUsuario.createIndex({ cedulausuario: 1 }, { unique: true });
     await colUsuario.createIndex({ correo: 1 }, { unique: true });
 
-    // Búsquedas rápidas por claves foráneas
+    // Relaciones FK para APIs
     await colJugador.createIndex({ idequipo: 1 });
     await colEvento.createIndex({ idcompetencia: 1 });
-    await colTransaccion.createIndex({ cedulausuario: 1 });
-    await colApuesta.createIndex({ cedulausuario: 1 });
-    await colDetalle.createIndex({ idapuesta: 1 }); // Vital para traer el detalle de un ticket
+    await colDetalle.createIndex({ idapuesta: 1 });
     await colDetalle.createIndex({ idevento: 1 });
+
+    console.log('✅ Índices optimizados creados correctamente.');
+
 
     console.log('✅ Inicialización COMPLETADA exitosamente.');
 
